@@ -1,5 +1,11 @@
+use std::{borrow::Cow, collections::HashMap};
+
 use chrono::NaiveDate;
-use mysql::{Pool, PooledConn};
+use mysql::{
+    params,
+    prelude::{Queryable, ToValue},
+    Params, Pool, PooledConn, Row, Value,
+};
 
 struct WorkPlace {
     id: Option<i32>,
@@ -154,12 +160,165 @@ impl DBHandler {
         return DBHandler { conn };
     }
 
-    // todo
-    pub fn create_table() {}
-    pub fn insert_data() {}
-    pub fn delete_table() {}
-    pub fn delete_data() {}
-    pub fn update() {}
-    pub fn select() {}
-    pub fn showtables() {}
+    /// 插入数据
+    ///
+    /// 参数：
+    /// `table` - 表名
+    /// `columns` - 列
+    /// `values` - 值
+    pub fn insert<T>(
+        &mut self,
+        table: &str,
+        columns: Vec<&str>,
+        values: Vec<T>,
+    ) -> Result<(), mysql::Error>
+    where
+        T: mysql::prelude::ToValue,
+    {
+        let columns_str = columns.join(",");
+        let values_str = values.iter().map(|_| "?").collect::<Vec<&str>>().join(",");
+        let query = format!(
+            "INSERT INTO {} ({}) VALUES ({})",
+            table, columns_str, values_str
+        );
+
+        let values: Vec<Value> = values.into_iter().map(|v| v.to_value()).collect();
+        self.conn.exec_drop(query, values)?;
+
+        return Ok(());
+    }
+
+    /// 删除数据
+    ///
+    /// 参数：
+    /// `table` - 表名
+    /// `where_columns` - 删除条件列名
+    /// `where_values` - 删除条件对应的值
+    pub fn delete<T>(
+        &mut self,
+        table: &str,
+        where_columns: Vec<&str>,
+        where_values: Vec<T>,
+    ) -> Result<(), mysql::Error>
+    where
+        T: mysql::prelude::ToValue,
+    {
+        let query = format!(
+            "DELETE FROM {} WHERE {}",
+            table,
+            where_columns
+                .iter()
+                .enumerate()
+                .map(|(_, column)| format!("{} = ?", column))
+                .collect::<Vec<String>>()
+                .join(" AND ")
+        );
+
+        let values: Vec<Value> = where_values.into_iter().map(|v| v.to_value()).collect();
+
+        self.conn.exec_drop(query, values)?;
+
+        return Ok(());
+    }
+
+    /// 更新数据
+    ///
+    /// 参数：
+    /// `table` - 表名
+    /// `set_columns` - 需要更新的列名
+    /// `set_values` - 对应的更新值
+    /// `where_columns` - 更新条件列名
+    /// `where_values` - 更新条件对应的值
+    pub fn update<T>(
+        &mut self,
+        table: &str,
+        set_columns: Vec<&str>,
+        set_values: Vec<T>,
+        where_columns: Vec<&str>,
+        where_values: Vec<T>,
+    ) -> Result<(), mysql::Error>
+    where
+        T: mysql::prelude::ToValue,
+    {
+        let query = format!(
+            "UPDATE {} SET {} WHERE {}",
+            table,
+            set_columns
+                .iter()
+                .enumerate()
+                .map(|(_, column)| format!("{} = ?", column))
+                .collect::<Vec<String>>()
+                .join(", "),
+            where_columns
+                .iter()
+                .enumerate()
+                .map(|(_, column)| format!("{} = ?", column))
+                .collect::<Vec<String>>()
+                .join(" AND ")
+        );
+
+        let mut params: Vec<Value> = Vec::new();
+        params.extend(set_values.into_iter().map(|v| v.to_value()));
+        params.extend(where_values.into_iter().map(|v| v.to_value()));
+
+        self.conn.exec_drop(query, params)?;
+
+        return Ok(());
+    }
+
+    /// 查询数据
+    ///
+    /// 参数：
+    /// `table` - 表名
+    /// `select_columns` - 需要查询的列名，如果为空则查询所有列
+    /// `where_columns` - 查询条件列名
+    /// `where_values` - 查询条件对应的值
+    ///
+    /// 返回值：
+    /// Vec<Row>：查找到的所有行
+    pub fn select<T>(
+        &mut self,
+        table: &str,
+        select_columns: Vec<&str>,
+        where_columns: Vec<&str>,
+        where_values: Vec<T>,
+    ) -> Vec<Row>
+    where
+        T: mysql::prelude::ToValue,
+    {
+        let select_columns_str = if select_columns.is_empty() {
+            "*".to_string()
+        } else {
+            select_columns.join(",")
+        };
+
+        let query = format!(
+            "SELECT {} FROM {} {}",
+            select_columns_str,
+            table,
+            if !where_columns.is_empty() {
+                format!(
+                    " WHERE {}",
+                    where_columns
+                        .iter()
+                        .enumerate()
+                        .map(|(i, column)| format!(
+                            "{} = {}",
+                            column,
+                            where_values.get(i).unwrap().to_value().as_sql(true)
+                        ))
+                        .collect::<Vec<String>>()
+                        .join(" AND ")
+                )
+            } else {
+                "".to_string()
+            }
+        );
+
+        let res = self.conn.query_iter(query);
+
+        let rows = res.unwrap().collect::<Result<Vec<_>, _>>().unwrap();
+
+        return rows;
+    }
 }
