@@ -1,15 +1,12 @@
 [package]
-name = "server"
+name = "client"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-mysql = "*"
-chrono = "*"
-hyper = { version = "0.14", features = ["full"] }
+reqwest = { version = "0.11", features = ["blocking", "json"] }
 tokio = { version = "1", features = ["full"] }
-serde = "*"
 serde_json = "*"
 lazy_static = "*"
