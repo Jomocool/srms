@@ -147,6 +147,7 @@ impl StdinHandler {
             let mut column = String::new();
             io::stdin().read_line(&mut column).expect("无法获取列名");
             let column = column.trim();
+            let tmp_column = column;
             if column.is_empty() {
                 println!("无效的列名，请重新输入！");
                 continue;
@@ -156,6 +157,9 @@ impl StdinHandler {
             }
             let column = format!(",{}", column);
             columns_clause.push_str(&column);
+            if tmp_column == "*" {
+                break;
+            }
         }
         return columns_clause[1..].to_string();
     }
@@ -167,7 +171,7 @@ impl StdinHandler {
         io::stdin().read_line(&mut choice).expect("无法获取选择");
         let choice = choice.trim();
         match choice {
-            "0" => return where_clause,
+            "0" => return "".to_string(),
             _ => loop {
                 println!("\n请输入条件:");
                 println!("请输入条件列名");
@@ -209,6 +213,33 @@ impl StdinHandler {
         return where_clause;
     }
 
+    pub fn input_values() -> String {
+        let mut values = String::new();
+        loop {
+            println!("\n请输入列名: [如果没有更多列, 请输入0]");
+            let mut column = String::new();
+            io::stdin().read_line(&mut column).expect("无法获取列名");
+            let column = column.trim();
+            if column == "0" {
+                break;
+            }
+
+            println!("请输入值:");
+            let mut val = String::new();
+            io::stdin().read_line(&mut val).expect("无法获取值");
+            let val = val.trim();
+            if Self::is_char_type_column(column) {
+                let val = format!("'{}',", val);
+                values.push_str(&val);
+            } else {
+                let val = format!("{},", val);
+                values.push_str(&val);
+            }
+        }
+        values.pop();
+        return values;
+    }
+
     fn is_char_type_column(column: &str) -> bool {
         return column == "address"
             || column == "name"
@@ -244,6 +275,17 @@ impl UserActionHandler {
             "table_name":table_name,
             "columns":columns,
             "where_clause":where_clause,
+        });
+    }
+
+    pub fn insert() -> Value {
+        let table_name = StdinHandler::input_table_name();
+        let values = StdinHandler::input_values();
+
+        return json!({
+            "message_type" : "insert",
+            "table_name":table_name,
+            "values":values,
         });
     }
 }
@@ -335,7 +377,7 @@ async fn main() {
                 return;
             }
             "1" => UserActionHandler::select(),
-            "2" => todo!(),
+            "2" => UserActionHandler::insert(),
             "3" => todo!(),
             "4" => todo!(),
             _ => todo!(),
