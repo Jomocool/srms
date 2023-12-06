@@ -35,6 +35,15 @@ struct Insert {
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
+struct Update {
+    message_type: String,
+    table_name: String,
+    set_clause: String,
+    where_clause: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize, Clone)]
 struct User {
     message_type: String,
     user_name: String,
@@ -110,6 +119,14 @@ fn handle_insert(body_bytes: Bytes) -> String {
         .insert(insert.table_name, insert.values)
 }
 
+fn hadnle_update(body_bytes: Bytes) -> String {
+    let update: Update = serde_json::from_slice(&body_bytes).unwrap();
+    SRMS_HANDLER
+        .lock()
+        .unwrap()
+        .update(update.table_name, update.set_clause, update.where_clause)
+}
+
 async fn handle_request(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     if req.method() == hyper::Method::POST {
         // 将消息转为字符串，以判断用哪个结构体去接收
@@ -123,6 +140,7 @@ async fn handle_request(req: Request<Body>) -> Result<Response<Body>, hyper::Err
                 "UserSignUp" => handle_user_signup(body_bytes),
                 "select" => handle_select(body_bytes),
                 "insert" => handle_insert(body_bytes),
+                "update" => hadnle_update(body_bytes),
                 _ => panic!("Unkown message type"),
             },
             _ => panic!("Missing or invalid message_type"),

@@ -50,41 +50,16 @@ impl DBHandler {
         return Ok(());
     }
 
-    pub fn update<T>(
-        &mut self,
-        table: &str,
-        set_columns: Vec<&str>,
-        set_values: Vec<T>,
-        where_columns: Vec<&str>,
-        where_values: Vec<T>,
-    ) -> Result<(), mysql::Error>
-    where
-        T: mysql::prelude::ToValue,
-    {
-        let query = format!(
-            "UPDATE {} SET {} WHERE {}",
-            table,
-            set_columns
-                .iter()
-                .enumerate()
-                .map(|(_, column)| format!("{} = ?", column))
-                .collect::<Vec<String>>()
-                .join(", "),
-            where_columns
-                .iter()
-                .enumerate()
-                .map(|(_, column)| format!("{} = ?", column))
-                .collect::<Vec<String>>()
-                .join(" AND ")
-        );
+    pub fn update(&mut self, table: String, set_clause: String, where_clause: String) -> String {
+        let query = format!("UPDATE {} SET {} {}", table, set_clause, where_clause,);
 
-        let mut params: Vec<Value> = Vec::new();
-        params.extend(set_values.into_iter().map(|v| v.to_value()));
-        params.extend(where_values.into_iter().map(|v| v.to_value()));
+        let res = self.conn.query_iter(query);
 
-        self.conn.exec_drop(query, params)?;
+        if res.is_err() {
+            return "更新失败！请重新检查添加信息".to_string();
+        }
 
-        return Ok(());
+        return "更新成功！".to_string();
     }
 
     pub fn select(

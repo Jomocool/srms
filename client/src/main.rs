@@ -240,6 +240,36 @@ impl StdinHandler {
         return values;
     }
 
+    pub fn input_set_clause() -> String {
+        let mut set_clause = String::new();
+        loop {
+            println!("\n请输入需要更新的列名: [如果没有更多列, 请输入0]");
+            let mut column = String::new();
+            io::stdin().read_line(&mut column).expect("无法获取列名");
+            let column = column.trim();
+            if column.is_empty() {
+                println!("无效的列名，请重新输入！");
+                continue;
+            }
+            if column == "0" {
+                break;
+            }
+            println!("请输入更新后的值:");
+            let mut val = String::new();
+            io::stdin().read_line(&mut val).expect("无法获取值");
+            let val = val.trim();
+            if Self::is_char_type_column(column) {
+                let set = format!("{} = '{}',", column, val);
+                set_clause.push_str(&set);
+            } else {
+                let set = format!("{} = {},", column, val);
+                set_clause.push_str(&set);
+            }
+        }
+        set_clause.pop();
+        return set_clause;
+    }
+
     fn is_char_type_column(column: &str) -> bool {
         return column == "address"
             || column == "name"
@@ -286,6 +316,19 @@ impl UserActionHandler {
             "message_type" : "insert",
             "table_name":table_name,
             "values":values,
+        });
+    }
+
+    pub fn update() -> Value {
+        let table_name = StdinHandler::input_table_name();
+        let set_clause = StdinHandler::input_set_clause();
+        let where_clause = StdinHandler::input_where_clause();
+
+        return json!({
+            "message_type" : "update",
+            "table_name":table_name,
+            "set_clause":set_clause,
+            "where_clause":where_clause,
         });
     }
 }
@@ -378,7 +421,7 @@ async fn main() {
             }
             "1" => UserActionHandler::select(),
             "2" => UserActionHandler::insert(),
-            "3" => todo!(),
+            "3" => UserActionHandler::update(),
             "4" => todo!(),
             _ => todo!(),
         };
@@ -389,6 +432,6 @@ async fn main() {
             .await
             .expect("Failed to send request!");
         let response_str = response.text().await.unwrap();
-        println!("{}", response_str);
+        println!("\n{}", response_str);
     }
 }
