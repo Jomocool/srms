@@ -154,12 +154,6 @@ impl DBHandler {
         return DBHandler { conn };
     }
 
-    /// 插入数据
-    ///
-    /// 参数：
-    /// `table` - 表名
-    /// `columns` - 列
-    /// `values` - 值
     pub fn insert<T>(
         &mut self,
         table: &str,
@@ -182,12 +176,6 @@ impl DBHandler {
         return Ok(());
     }
 
-    /// 删除数据
-    ///
-    /// 参数：
-    /// `table` - 表名
-    /// `where_columns` - 删除条件列名
-    /// `where_values` - 删除条件对应的值
     pub fn delete<T>(
         &mut self,
         table: &str,
@@ -215,14 +203,6 @@ impl DBHandler {
         return Ok(());
     }
 
-    /// 更新数据
-    ///
-    /// 参数：
-    /// `table` - 表名
-    /// `set_columns` - 需要更新的列名
-    /// `set_values` - 对应的更新值
-    /// `where_columns` - 更新条件列名
-    /// `where_values` - 更新条件对应的值
     pub fn update<T>(
         &mut self,
         table: &str,
@@ -260,59 +240,42 @@ impl DBHandler {
         return Ok(());
     }
 
-    /// 查询数据
-    ///
-    /// 参数：
-    /// `table` - 表名
-    /// `select_columns` - 需要查询的列名，如果为空则查询所有列
-    /// `where_columns` - 查询条件列名
-    /// `where_values` - 查询条件对应的值
-    ///
-    /// 返回值：
-    /// Vec<Row>：查找到的所有行
-    pub fn select<T>(
+    pub fn select(
         &mut self,
-        table: &str,
-        select_columns: Vec<&str>,
-        where_columns: Vec<&str>,
-        where_values: Vec<T>,
-    ) -> Vec<Row>
-    where
-        T: mysql::prelude::ToValue,
-    {
-        let select_columns_str = if select_columns.is_empty() {
-            "*".to_string()
-        } else {
-            select_columns.join(",")
-        };
-
-        let query = format!(
-            "SELECT {} FROM {} {}",
-            select_columns_str,
-            table,
-            if !where_columns.is_empty() {
-                format!(
-                    " WHERE {}",
-                    where_columns
-                        .iter()
-                        .enumerate()
-                        .map(|(i, column)| format!(
-                            "{} = {}",
-                            column,
-                            where_values.get(i).unwrap().to_value().as_sql(true)
-                        ))
-                        .collect::<Vec<String>>()
-                        .join(" AND ")
-                )
-            } else {
-                "".to_string()
-            }
-        );
+        table: String,
+        select_columns: String,
+        where_clause: String,
+    ) -> String {
+        let query = format!("SELECT {} FROM {} {}", select_columns, table, where_clause,);
 
         let res = self.conn.query_iter(query);
 
-        let rows = res.unwrap().collect::<Result<Vec<_>, _>>().unwrap();
+        let message: String = match res {
+            Ok(res) => {
+                let rows = res.collect::<Result<Vec<_>, _>>().unwrap();
+                let mut response_body = String::new();
+                response_body.push_str("------------------------------------------\n");
+                for row in rows {
+                    // 遍历每个字段
+                    let mut row_str = String::new();
+                    for i in 0..row.len() {
+                        let col_val = format!(
+                            "| {}: {} ",
+                            &row.columns()[i].name_str(),
+                            row.get::<String, _>(i).unwrap()
+                        );
+                        row_str.push_str(&col_val);
+                    }
+                    row_str.push_str("\n");
+                    response_body.push_str(&row_str);
+                    response_body.push_str("------------------------------------------\n");
+                }
+                response_body.push('\n');
+                response_body
+            }
+            Err(_) => "查询出错！".to_string(),
+        };
 
-        return rows;
+        return message;
     }
 }

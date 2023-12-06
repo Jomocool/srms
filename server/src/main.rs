@@ -18,6 +18,15 @@ lazy_static! {
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
+struct Select {
+    message_type: String,
+    table_name: String,
+    columns: String,
+    where_clause: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize, Clone)]
 struct User {
     message_type: String,
     user_name: String,
@@ -77,6 +86,14 @@ fn handle_user_signup(body_bytes: Bytes) -> String {
     return "注册失败! 用户名已存在，请更换用户名".to_string();
 }
 
+fn handle_select(body_bytes: Bytes) -> String {
+    let select: Select = serde_json::from_slice(&body_bytes).unwrap();
+    SRMS_HANDLER
+        .lock()
+        .unwrap()
+        .select(select.table_name, select.columns, select.where_clause)
+}
+
 async fn handle_request(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     if req.method() == hyper::Method::POST {
         // 将消息转为字符串，以判断用哪个结构体去接收
@@ -88,6 +105,7 @@ async fn handle_request(req: Request<Body>) -> Result<Response<Body>, hyper::Err
             Some(JsonValue::String(message_type)) => match message_type.as_str() {
                 "UserSignIn" => handle_user_signin(body_bytes),
                 "UserSignUp" => handle_user_signup(body_bytes),
+                "select" => handle_select(body_bytes),
                 _ => panic!("Unkown message type"),
             },
             _ => panic!("Missing or invalid message_type"),
@@ -95,42 +113,6 @@ async fn handle_request(req: Request<Body>) -> Result<Response<Body>, hyper::Err
 
         let body = Body::from(response);
         return Ok(Response::new(body));
-
-        // let mut response_body = String::new();
-        // match request_data.message.as_str() {
-        //     "1" => {
-        //         response_body.push_str("------------------------------------------\n");
-        //         let select_columns = vec![];
-        //         let where_columns = vec![];
-        //         let where_values: Vec<Value> = vec![];
-        //         let rows = SRMS_HANDLER.lock().unwrap().select(
-        //             "WorkPlace",
-        //             select_columns,
-        //             where_columns,
-        //             where_values,
-        //         );
-        //         for row in rows {
-        //             // 遍历每个字段
-        //             let mut row_str = String::new();
-        //             for i in 0..row.len() {
-        //                 let col_val = format!(
-        //                     "| {}: {} ",
-        //                     &row.columns()[i].name_str(),
-        //                     row.get::<String, _>(i).unwrap()
-        //                 );
-        //                 row_str.push_str(&col_val);
-        //             }
-        //             row_str.push_str("\n");
-        //             response_body.push_str(&row_str);
-        //             response_body.push_str("------------------------------------------\n");
-        //         }
-        //         response_body.push('\n');
-        //     }
-        //     _ => todo!(),
-        // }
-
-        // let body = Body::from(response_body);
-        // return Ok(Response::new(body));
     }
 
     // 处理服务端请求逻辑，这里简单返回一个响应
@@ -140,8 +122,6 @@ async fn handle_request(req: Request<Body>) -> Result<Response<Body>, hyper::Err
 
 #[tokio::main]
 async fn main() {
-    let srms_handler = DBHandler::new();
-
     let addr = ([127, 0, 0, 1], 8000).into();
     let make_svc =
         make_service_fn(|_conn| async { Ok::<_, hyper::Error>(service_fn(handle_request)) });

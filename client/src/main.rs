@@ -59,7 +59,7 @@ impl StdinHandler {
     }
     pub fn input_username() -> String {
         loop {
-            println!("请输入用户名(不允许有特殊符号):");
+            println!("\n请输入用户名(不允许有特殊符号):");
             let mut user_name = String::new();
             io::stdin()
                 .read_line(&mut user_name)
@@ -75,7 +75,7 @@ impl StdinHandler {
 
     pub fn input_password() -> String {
         loop {
-            println!("请输入密码:");
+            println!("\n请输入密码:");
             let mut password = String::new();
             io::stdin().read_line(&mut password).expect("无法获取密码");
             let password = password.trim();
@@ -89,7 +89,7 @@ impl StdinHandler {
 
     pub fn input_userlevel() -> String {
         loop {
-            println!("请输入用户权限: <1.老板> <2.管理员> <3.普通员工>");
+            println!("\n请输入用户权限: <1.老板> <2.管理员> <3.普通员工>");
             let mut user_level = String::new();
             io::stdin()
                 .read_line(&mut user_level)
@@ -103,6 +103,148 @@ impl StdinHandler {
             }
             return user_level.to_string();
         }
+    }
+
+    pub fn input_action() -> String {
+        loop {
+            println!("\n请输入你的操作:");
+            println!("<0.退出>");
+            println!("<1.查询>");
+            println!("<2.添加>");
+            println!("<3.更新>");
+            println!("<4.删除>");
+            let mut action = String::new();
+            io::stdin().read_line(&mut action).expect("无法获取操作");
+            let action = action.trim();
+            if action.is_empty()
+                || (action != "0"
+                    && action != "1"
+                    && action != "2"
+                    && action != "3"
+                    && action != "4")
+            {
+                println!("无效的操作，请重新输入！");
+                continue;
+            }
+            return action.to_string();
+        }
+    }
+
+    pub fn input_table_name() -> String {
+        println!("\n请输入表名:");
+        let mut table_name = String::new();
+        io::stdin()
+            .read_line(&mut table_name)
+            .expect("无法获取表名");
+        let table_name = table_name.trim();
+        return table_name.to_string();
+    }
+
+    pub fn input_columns() -> String {
+        let mut columns_clause = String::new();
+        loop {
+            println!("\n请输入列名(查询所有列请输入 * ): [如果没有更多列需要被查询, 请输入0]");
+            let mut column = String::new();
+            io::stdin().read_line(&mut column).expect("无法获取列名");
+            let column = column.trim();
+            if column.is_empty() {
+                println!("无效的列名，请重新输入！");
+                continue;
+            }
+            if column == "0" {
+                break;
+            }
+            let column = format!(",{}", column);
+            columns_clause.push_str(&column);
+        }
+        return columns_clause[1..].to_string();
+    }
+
+    pub fn input_where_clause() -> String {
+        let mut where_clause = String::from("WHERE ");
+        println!("\n无条件则输入0以跳过, [按下回车以输入条件]");
+        let mut choice = String::new();
+        io::stdin().read_line(&mut choice).expect("无法获取选择");
+        let choice = choice.trim();
+        match choice {
+            "0" => return where_clause,
+            _ => loop {
+                println!("\n请输入条件:");
+                println!("请输入条件列名");
+                let mut condition_column = String::new();
+                io::stdin()
+                    .read_line(&mut condition_column)
+                    .expect("无法获取条件列名");
+                let condition_column = condition_column.trim();
+                where_clause.push_str(condition_column);
+
+                println!("请输入条件值:");
+                let mut val = String::new();
+                io::stdin().read_line(&mut val).expect("无法获取条件列值");
+                let val = val.trim();
+
+                if Self::is_char_type_column(condition_column) {
+                    let val = format!("='{}'", val);
+                    where_clause.push_str(&val);
+                } else {
+                    let val = format!("={}", val);
+                    where_clause.push_str(&val);
+                }
+
+                println!(
+                    "请输入与下一个条件连接的逻辑关系: AND、OR... [如果没有更多条件, 请输入0]"
+                );
+                let mut logic_keyword = String::new();
+                io::stdin()
+                    .read_line(&mut logic_keyword)
+                    .expect("无法获取连接词");
+                let logic_keyword = logic_keyword.trim();
+                if logic_keyword == "0" {
+                    break;
+                }
+                let logic_keyword = format!(" {} ", logic_keyword);
+                where_clause.push_str(&logic_keyword);
+            },
+        }
+        return where_clause;
+    }
+
+    fn is_char_type_column(column: &str) -> bool {
+        return column == "address"
+            || column == "name"
+            || column == "introduction"
+            || column == "gender"
+            || column == "title"
+            || column == "ResearchDirection"
+            || column == "duty"
+            || column == "content"
+            || column == "LeaderName"
+            || column == "LeaderTelephone"
+            || column == "LeaderPhone"
+            || column == "LeaderEmail"
+            || column == "ContactName"
+            || column == "ContactTelephone"
+            || column == "ContactPhone"
+            || column == "ContactEmail"
+            || column == "TechnicalIndicators"
+            || column == "type";
+    }
+}
+
+struct UserActionHandler {}
+
+impl UserActionHandler {
+    pub fn select() -> Value {
+        let table_name = StdinHandler::input_table_name();
+        let columns = StdinHandler::input_columns();
+        let where_clause = StdinHandler::input_where_clause();
+
+        return json!({
+            "message_type" : "select",
+            "table_name":table_name,
+            "columns":columns,
+            "where_clause":where_clause,
+        });
     }
 }
 
@@ -145,6 +287,7 @@ fn signin() -> Value {
     return request_data;
 }
 
+// 设置当前用户信息
 fn set_user(user_name: String, user_level: UserLevel) {
     *USER_NAME.lock().unwrap() = user_name;
     *USER_LEVEL.lock().unwrap() = user_level;
@@ -181,5 +324,29 @@ async fn main() {
             println!("{}", response_str);
             continue;
         }
+    }
+
+    // 用户操作数据库
+    loop {
+        let action = StdinHandler::input_action();
+        let request_data = match action.as_str() {
+            "0" => {
+                println!("\nBye~");
+                return;
+            }
+            "1" => UserActionHandler::select(),
+            "2" => todo!(),
+            "3" => todo!(),
+            "4" => todo!(),
+            _ => todo!(),
+        };
+        let response = reqwest::Client::new()
+            .post("http://127.0.0.1:8000")
+            .json(&request_data)
+            .send()
+            .await
+            .expect("Failed to send request!");
+        let response_str = response.text().await.unwrap();
+        println!("{}", response_str);
     }
 }
