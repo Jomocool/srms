@@ -1,5 +1,5 @@
 // use chrono::NaiveDate;
-use mysql::{prelude::Queryable, Pool, PooledConn, Value};
+use mysql::{prelude::Queryable, Pool, PooledConn};
 pub struct DBHandler {
     conn: PooledConn,
 }
@@ -23,31 +23,16 @@ impl DBHandler {
         return "添加成功！".to_string();
     }
 
-    pub fn delete<T>(
-        &mut self,
-        table: &str,
-        where_columns: Vec<&str>,
-        where_values: Vec<T>,
-    ) -> Result<(), mysql::Error>
-    where
-        T: mysql::prelude::ToValue,
-    {
-        let query = format!(
-            "DELETE FROM {} WHERE {}",
-            table,
-            where_columns
-                .iter()
-                .enumerate()
-                .map(|(_, column)| format!("{} = ?", column))
-                .collect::<Vec<String>>()
-                .join(" AND ")
-        );
+    pub fn delete(&mut self, table: String, where_clause: String) -> String {
+        let query = format!("DELETE FROM {} {}", table, where_clause,);
 
-        let values: Vec<Value> = where_values.into_iter().map(|v| v.to_value()).collect();
+        let res = self.conn.query_iter(query);
 
-        self.conn.exec_drop(query, values)?;
+        if res.is_err() {
+            return "删除失败！请重新检查添加信息".to_string();
+        }
 
-        return Ok(());
+        return "删除成功！".to_string();
     }
 
     pub fn update(&mut self, table: String, set_clause: String, where_clause: String) -> String {

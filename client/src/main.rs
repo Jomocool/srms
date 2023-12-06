@@ -8,7 +8,7 @@ lazy_static! {
     static ref USER_LEVEL: Mutex<UserLevel> = Mutex::new(UserLevel::Default);
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 /// 用户级别
 enum UserLevel {
     /// 老板
@@ -47,11 +47,11 @@ impl StdinHandler {
     pub fn input_choice() -> String {
         loop {
             let mut choice = String::new();
-            println!("\n<1.登录>  <2.注册>");
+            println!("\n>>> 1.登录  2.注册");
             io::stdin().read_line(&mut choice).expect("无法获取选择");
             let choice = choice.trim();
             if choice.is_empty() || (choice != "1" && choice != "2") {
-                println!("无效的选择，请重新输入! ");
+                println!(">>>无效的选择，请重新输入! ");
                 continue;
             }
             return choice.to_string();
@@ -59,14 +59,14 @@ impl StdinHandler {
     }
     pub fn input_username() -> String {
         loop {
-            println!("\n请输入用户名(不允许有特殊符号):");
+            println!("\n>>> 请输入用户名(不允许有特殊符号):");
             let mut user_name = String::new();
             io::stdin()
                 .read_line(&mut user_name)
                 .expect("无法获取用户名");
             let user_name = user_name.trim();
             if user_name.is_empty() {
-                println!("用户名不允许为空，请重新输入！");
+                println!(">>> 用户名不允许为空，请重新输入！");
                 continue;
             }
             return user_name.to_string();
@@ -75,12 +75,12 @@ impl StdinHandler {
 
     pub fn input_password() -> String {
         loop {
-            println!("\n请输入密码:");
+            println!("\n>>> 请输入密码:");
             let mut password = String::new();
             io::stdin().read_line(&mut password).expect("无法获取密码");
             let password = password.trim();
             if password.is_empty() {
-                println!("密码不允许为空，请重新输入！");
+                println!(">>> 密码不允许为空，请重新输入！");
                 continue;
             }
             return password.to_string();
@@ -89,7 +89,7 @@ impl StdinHandler {
 
     pub fn input_userlevel() -> String {
         loop {
-            println!("\n请输入用户权限: <1.老板> <2.管理员> <3.普通员工>");
+            println!("\n>>> 请输入用户权限: <1.老板> <2.管理员> <3.普通员工>");
             let mut user_level = String::new();
             io::stdin()
                 .read_line(&mut user_level)
@@ -98,7 +98,7 @@ impl StdinHandler {
             if user_level.is_empty()
                 || (user_level != "1" && user_level != "2" && user_level != "3")
             {
-                println!("无效的用户权限，请重新输入！");
+                println!(">>> 无效的用户权限，请重新输入！");
                 continue;
             }
             return user_level.to_string();
@@ -107,7 +107,7 @@ impl StdinHandler {
 
     pub fn input_action() -> String {
         loop {
-            println!("\n请输入你的操作:");
+            println!("\n>>> 请输入你的操作:");
             println!("<0.退出>");
             println!("<1.查询>");
             println!("<2.添加>");
@@ -123,7 +123,7 @@ impl StdinHandler {
                     && action != "3"
                     && action != "4")
             {
-                println!("无效的操作，请重新输入！");
+                println!(">>> 无效的操作，请重新输入！");
                 continue;
             }
             return action.to_string();
@@ -131,7 +131,7 @@ impl StdinHandler {
     }
 
     pub fn input_table_name() -> String {
-        println!("\n请输入表名:");
+        println!("\n>>> 请输入表名:");
         let mut table_name = String::new();
         io::stdin()
             .read_line(&mut table_name)
@@ -143,13 +143,13 @@ impl StdinHandler {
     pub fn input_columns() -> String {
         let mut columns_clause = String::new();
         loop {
-            println!("\n请输入列名(查询所有列请输入 * ): [如果没有更多列需要被查询, 请输入0]");
+            println!("\n>>> 请输入列名(查询所有列请输入 * ): [如果没有更多列需要被查询, 请输入0]");
             let mut column = String::new();
             io::stdin().read_line(&mut column).expect("无法获取列名");
             let column = column.trim();
             let tmp_column = column;
             if column.is_empty() {
-                println!("无效的列名，请重新输入！");
+                println!(">>> 无效的列名，请重新输入！");
                 continue;
             }
             if column == "0" {
@@ -166,15 +166,15 @@ impl StdinHandler {
 
     pub fn input_where_clause() -> String {
         let mut where_clause = String::from("WHERE ");
-        println!("\n无条件则输入0以跳过, [按下回车以输入条件]");
+        println!("\n>>> 无条件则输入0以跳过, [按下回车以输入条件]");
         let mut choice = String::new();
         io::stdin().read_line(&mut choice).expect("无法获取选择");
         let choice = choice.trim();
         match choice {
             "0" => return "".to_string(),
             _ => loop {
-                println!("\n请输入条件:");
-                println!("请输入条件列名");
+                println!("\n>>> 请输入条件:");
+                println!(">>> 请输入条件列名");
                 let mut condition_column = String::new();
                 io::stdin()
                     .read_line(&mut condition_column)
@@ -182,7 +182,7 @@ impl StdinHandler {
                 let condition_column = condition_column.trim();
                 where_clause.push_str(condition_column);
 
-                println!("请输入条件值:");
+                println!(">>> 请输入条件值:");
                 let mut val = String::new();
                 io::stdin().read_line(&mut val).expect("无法获取条件列值");
                 let val = val.trim();
@@ -196,7 +196,7 @@ impl StdinHandler {
                 }
 
                 println!(
-                    "请输入与下一个条件连接的逻辑关系: AND、OR... [如果没有更多条件, 请输入0]"
+                    ">>> 请输入与下一个条件连接的逻辑关系: AND、OR... [如果没有更多条件, 请输入0]"
                 );
                 let mut logic_keyword = String::new();
                 io::stdin()
@@ -216,7 +216,7 @@ impl StdinHandler {
     pub fn input_values() -> String {
         let mut values = String::new();
         loop {
-            println!("\n请输入列名: [如果没有更多列, 请输入0]");
+            println!("\n>>> 请输入列名: [如果没有更多列, 请输入0]");
             let mut column = String::new();
             io::stdin().read_line(&mut column).expect("无法获取列名");
             let column = column.trim();
@@ -224,7 +224,7 @@ impl StdinHandler {
                 break;
             }
 
-            println!("请输入值:");
+            println!(">>> 请输入值:");
             let mut val = String::new();
             io::stdin().read_line(&mut val).expect("无法获取值");
             let val = val.trim();
@@ -243,18 +243,18 @@ impl StdinHandler {
     pub fn input_set_clause() -> String {
         let mut set_clause = String::new();
         loop {
-            println!("\n请输入需要更新的列名: [如果没有更多列, 请输入0]");
+            println!("\n>>> 请输入需要更新的列名: [如果没有更多列, 请输入0]");
             let mut column = String::new();
             io::stdin().read_line(&mut column).expect("无法获取列名");
             let column = column.trim();
             if column.is_empty() {
-                println!("无效的列名，请重新输入！");
+                println!(">>> 无效的列名，请重新输入！");
                 continue;
             }
             if column == "0" {
                 break;
             }
-            println!("请输入更新后的值:");
+            println!(">>> 请输入更新后的值:");
             let mut val = String::new();
             io::stdin().read_line(&mut val).expect("无法获取值");
             let val = val.trim();
@@ -328,6 +328,17 @@ impl UserActionHandler {
             "message_type" : "update",
             "table_name":table_name,
             "set_clause":set_clause,
+            "where_clause":where_clause,
+        });
+    }
+
+    pub fn delete() -> Value {
+        let table_name = StdinHandler::input_table_name();
+        let where_clause = StdinHandler::input_where_clause();
+
+        return json!({
+            "message_type" : "delete",
+            "table_name":table_name,
             "where_clause":where_clause,
         });
     }
@@ -416,13 +427,34 @@ async fn main() {
         let action = StdinHandler::input_action();
         let request_data = match action.as_str() {
             "0" => {
-                println!("\nBye~");
+                println!("\n>>> Bye~");
                 return;
             }
             "1" => UserActionHandler::select(),
-            "2" => UserActionHandler::insert(),
-            "3" => UserActionHandler::update(),
-            "4" => todo!(),
+            "2" => {
+                if *USER_LEVEL.lock().unwrap() == UserLevel::Worker {
+                    println!("\n>>> 权限不足! 无法执行操作");
+                    continue;
+                } else {
+                    UserActionHandler::insert()
+                }
+            }
+            "3" => {
+                if *USER_LEVEL.lock().unwrap() == UserLevel::Worker {
+                    println!("\n>>> 权限不足! 无法执行操作");
+                    continue;
+                } else {
+                    UserActionHandler::update()
+                }
+            }
+            "4" => {
+                if *USER_LEVEL.lock().unwrap() == UserLevel::Worker {
+                    println!("\n>>> 权限不足! 无法执行操作");
+                    continue;
+                } else {
+                    UserActionHandler::delete()
+                }
+            }
             _ => todo!(),
         };
         let response = reqwest::Client::new()
@@ -433,5 +465,9 @@ async fn main() {
             .expect("Failed to send request!");
         let response_str = response.text().await.unwrap();
         println!("\n{}", response_str);
+
+        println!("\n>>> 按下任意键继续...");
+        let mut enter = String::new();
+        io::stdin().read_line(&mut enter).expect("无法获取按键");
     }
 }
