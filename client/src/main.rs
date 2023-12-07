@@ -288,20 +288,70 @@ impl StdinHandler {
             || column == "ContactPhone"
             || column == "ContactEmail"
             || column == "TechnicalIndicators"
-            || column == "type";
+            || column == "type"
+            || column == "StartDate"
+            || column == "EndDate"
+            || column == "JoinDate"
+            || column == "AchieveDate";
     }
 }
 
 struct UserActionHandler {}
 
 impl UserActionHandler {
+    /// 注册
+    pub fn signup() -> Value {
+        let user_name = StdinHandler::input_username();
+        let password = StdinHandler::input_password();
+        let user_level_choice = StdinHandler::input_userlevel();
+        let user_level = UserLevel::to_user_level(&user_level_choice);
+        let user_level_str = UserLevel::to_string(user_level);
+
+        let request_data = json!({
+            "message_type" : "SignUp",
+            "user_name" : user_name,
+            "password" : password,
+            "user_level" : user_level_str,
+        });
+
+        return request_data;
+    }
+
+    /// 登录
+    pub fn signin() -> Value {
+        let user_name = StdinHandler::input_username();
+        let password = StdinHandler::input_password();
+        let user_level_choice = StdinHandler::input_userlevel();
+        let user_level = UserLevel::to_user_level(&user_level_choice);
+        let user_level_str = UserLevel::to_string(user_level.clone());
+
+        // 设置当前用户
+        set_user(user_name.clone(), user_level);
+
+        let request_data = json!({
+            "message_type" : "SignIn",
+            "user_name" : user_name,
+            "password" : password,
+            "user_level" : user_level_str,
+        });
+
+        return request_data;
+    }
+
+    /// 退出
+    pub fn exit() -> Value {
+        return json!({
+            "message_type" : "Exit",
+        });
+    }
+
     pub fn select() -> Value {
         let table_name = StdinHandler::input_table_name();
         let columns = StdinHandler::input_columns();
         let where_clause = StdinHandler::input_where_clause();
 
         return json!({
-            "message_type" : "select",
+            "message_type" : "Select",
             "table_name":table_name,
             "columns":columns,
             "where_clause":where_clause,
@@ -313,7 +363,7 @@ impl UserActionHandler {
         let values = StdinHandler::input_values();
 
         return json!({
-            "message_type" : "insert",
+            "message_type" : "Insert",
             "table_name":table_name,
             "values":values,
         });
@@ -325,7 +375,7 @@ impl UserActionHandler {
         let where_clause = StdinHandler::input_where_clause();
 
         return json!({
-            "message_type" : "update",
+            "message_type" : "Update",
             "table_name":table_name,
             "set_clause":set_clause,
             "where_clause":where_clause,
@@ -337,50 +387,11 @@ impl UserActionHandler {
         let where_clause = StdinHandler::input_where_clause();
 
         return json!({
-            "message_type" : "delete",
+            "message_type" : "Delete",
             "table_name":table_name,
             "where_clause":where_clause,
         });
     }
-}
-
-/// 注册
-fn signup() -> Value {
-    let user_name = StdinHandler::input_username();
-    let password = StdinHandler::input_password();
-    let user_level_choice = StdinHandler::input_userlevel();
-    let user_level = UserLevel::to_user_level(&user_level_choice);
-    let user_level_str = UserLevel::to_string(user_level);
-
-    let request_data = json!({
-        "message_type" : "UserSignUp",
-        "user_name" : user_name,
-        "password" : password,
-        "user_level" : user_level_str,
-    });
-
-    return request_data;
-}
-
-/// 登录
-fn signin() -> Value {
-    let user_name = StdinHandler::input_username();
-    let password = StdinHandler::input_password();
-    let user_level_choice = StdinHandler::input_userlevel();
-    let user_level = UserLevel::to_user_level(&user_level_choice);
-    let user_level_str = UserLevel::to_string(user_level.clone());
-
-    // 设置当前用户
-    set_user(user_name.clone(), user_level);
-
-    let request_data = json!({
-        "message_type" : "UserSignIn",
-        "user_name" : user_name,
-        "password" : password,
-        "user_level" : user_level_str,
-    });
-
-    return request_data;
 }
 
 // 设置当前用户信息
@@ -395,7 +406,7 @@ async fn main() {
     loop {
         let choice = StdinHandler::input_choice();
         if choice == "1" {
-            let request_data = signin();
+            let request_data = UserActionHandler::signin();
             let response = reqwest::Client::new()
                 .post("http://127.0.0.1:8000")
                 .json(&request_data)
@@ -409,7 +420,7 @@ async fn main() {
             }
             continue;
         } else if choice == "2" {
-            let request_data = signup();
+            let request_data = UserActionHandler::signup();
             let response = reqwest::Client::new()
                 .post("http://127.0.0.1:8000")
                 .json(&request_data)
@@ -422,13 +433,14 @@ async fn main() {
         }
     }
 
+    let mut exit = false;
     // 用户操作数据库
     loop {
         let action = StdinHandler::input_action();
         let request_data = match action.as_str() {
             "0" => {
-                println!("\n>>> Bye~");
-                return;
+                exit = true;
+                UserActionHandler::exit()
             }
             "1" => UserActionHandler::select(),
             "2" => {
@@ -465,6 +477,10 @@ async fn main() {
             .expect("Failed to send request!");
         let response_str = response.text().await.unwrap();
         println!("\n{}", response_str);
+
+        if exit {
+            break;
+        }
 
         println!("\n>>> 按下任意键继续...");
         let mut enter = String::new();

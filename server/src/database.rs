@@ -1,5 +1,12 @@
-// use chrono::NaiveDate;
 use mysql::{prelude::Queryable, Pool, PooledConn};
+
+pub enum DBError {
+    InsertError(String),
+    UpdateError(String),
+    DeleteError(String),
+    SelectError(String),
+}
+
 pub struct DBHandler {
     conn: PooledConn,
 }
@@ -12,39 +19,47 @@ impl DBHandler {
         return DBHandler { conn };
     }
 
-    pub fn insert(&mut self, table: String, values: String) -> String {
+    pub fn insert(&mut self, table: String, values: String) -> Result<String, DBError> {
         let query = format!("INSERT INTO {} VALUES ({})", table, values);
         let res = self.conn.query_iter(query);
 
         if res.is_err() {
-            return "添加失败！请重新检查添加信息".to_string();
+            let errmsg = "添加失败！请重新检查添加信息";
+            return Err(DBError::InsertError(errmsg.to_string()));
         }
 
-        return "添加成功！".to_string();
+        return Ok("添加成功！".to_string());
     }
 
-    pub fn delete(&mut self, table: String, where_clause: String) -> String {
+    pub fn delete(&mut self, table: String, where_clause: String) -> Result<String, DBError> {
         let query = format!("DELETE FROM {} {}", table, where_clause,);
 
         let res = self.conn.query_iter(query);
 
         if res.is_err() {
-            return "删除失败！请重新检查添加信息".to_string();
+            let errmsg = "删除失败！请重新检查添加信息";
+            return Err(DBError::DeleteError(errmsg.to_string()));
         }
 
-        return "删除成功！".to_string();
+        return Ok("删除成功！".to_string());
     }
 
-    pub fn update(&mut self, table: String, set_clause: String, where_clause: String) -> String {
+    pub fn update(
+        &mut self,
+        table: String,
+        set_clause: String,
+        where_clause: String,
+    ) -> Result<String, DBError> {
         let query = format!("UPDATE {} SET {} {}", table, set_clause, where_clause,);
 
         let res = self.conn.query_iter(query);
 
         if res.is_err() {
-            return "更新失败！请重新检查添加信息".to_string();
+            let errmsg = "更新失败！请重新检查添加信息";
+            return Err(DBError::UpdateError(errmsg.to_string()));
         }
 
-        return "更新成功！".to_string();
+        return Ok("更新成功！".to_string());
     }
 
     pub fn select(
@@ -52,35 +67,37 @@ impl DBHandler {
         table: String,
         select_columns: String,
         where_clause: String,
-    ) -> String {
+    ) -> Result<String, DBError> {
         let query = format!("SELECT {} FROM {} {}", select_columns, table, where_clause,);
 
         let res = self.conn.query_iter(query);
 
-        let message: String = match res {
-            Ok(res) => {
-                let rows = res.collect::<Result<Vec<_>, _>>().unwrap();
-                let mut response_body = String::new();
-                for row in rows {
-                    // 遍历每个字段
-                    let mut row_str = String::new();
-                    for i in 0..row.len() {
-                        let col_val = format!(
-                            "| {}: {} ",
-                            &row.columns()[i].name_str(),
-                            row.get::<String, _>(i).unwrap()
-                        );
-                        row_str.push_str(&col_val);
-                    }
-                    row_str.push_str("\n");
-                    response_body.push_str(&row_str);
+        if res.is_err() {
+            let errmsg = "查询失败！请检查查询信息";
+            return Err(DBError::SelectError(errmsg.to_string()));
+        }
+
+        let message: String = {
+            let rows = res.unwrap().collect::<Result<Vec<_>, _>>().unwrap();
+            let mut response_body = String::new();
+            for row in rows {
+                // 遍历每个字段
+                let mut row_str = String::new();
+                for i in 0..row.len() {
+                    let col_val = format!(
+                        "| {}: {} ",
+                        &row.columns()[i].name_str(),
+                        row.get::<String, _>(i).unwrap()
+                    );
+                    row_str.push_str(&col_val);
                 }
-                response_body.push('\n');
-                response_body
+                row_str.push_str("\n");
+                response_body.push_str(&row_str);
             }
-            Err(_) => "查询失败！请检查查询信息".to_string(),
+            response_body.push('\n');
+            response_body
         };
 
-        return message;
+        return Ok(message);
     }
 }
