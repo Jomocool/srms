@@ -131,13 +131,72 @@ impl StdinHandler {
     }
 
     pub fn input_table_name() -> String {
-        println!("\n>>> 请输入表名:");
-        let mut table_name = String::new();
-        io::stdin()
-            .read_line(&mut table_name)
-            .expect("无法获取表名");
-        let table_name = table_name.trim();
-        return table_name.to_string();
+        loop {
+            println!("\n>>> 请选择表名:");
+            let mut choice = String::new();
+            println!("1.办公场地表");
+            println!("2.研究室表");
+            println!("3.科研人员表");
+            println!("4.研究室主任表");
+            println!("5.秘书表");
+            println!("6.科研项目表");
+            println!("7.项目委托方表");
+            println!("8.项目合作方表");
+            println!("9.质量检测方表");
+            println!("10.科研项目参与人员表");
+            println!("11.科研项目子课题表");
+            println!("12.科研成果表");
+            println!("13.科研成果贡献人表");
+            println!("14.专利表");
+            println!("15.论文表");
+            println!("16.软件著作权表");
+            io::stdin().read_line(&mut choice).expect("无法获取选择");
+
+            let choice = choice.trim();
+            if choice.is_empty()
+                || (choice != "1"
+                    && choice != "2"
+                    && choice != "3"
+                    && choice != "4"
+                    && choice != "5"
+                    && choice != "6"
+                    && choice != "7"
+                    && choice != "8"
+                    && choice != "9"
+                    && choice != "10"
+                    && choice != "11"
+                    && choice != "12"
+                    && choice != "13"
+                    && choice != "14"
+                    && choice != "15"
+                    && choice != "16")
+            {
+                println!("无效的选择，请重新输入！");
+                continue;
+            }
+
+            let table_name = match choice {
+                "1" => "WorkPlace",
+                "2" => "Lab",
+                "3" => "Researcher",
+                "4" => "Director",
+                "5" => "Secretary",
+                "6" => "ResearchProject",
+                "7" => "ProjectClient",
+                "8" => "ProjectCollaborator",
+                "9" => "QualityMonitor",
+                "10" => "ProjectParticipant",
+                "11" => "ProjectSubtask",
+                "12" => "ResearchOutcome",
+                "13" => "OutcomeContributor",
+                "14" => "Patent",
+                "15" => "Paper",
+                "16" => "SoftwareCopyright",
+                _ => todo!(),
+            };
+
+            return table_name.to_string();
+        }
     }
 
     pub fn input_columns() -> String {
@@ -220,6 +279,11 @@ impl StdinHandler {
             let mut column = String::new();
             io::stdin().read_line(&mut column).expect("无法获取列名");
             let column = column.trim();
+            if column.is_empty() {
+                println!("无效的列名，请重新输入！");
+                continue;
+            }
+
             if column == "0" {
                 break;
             }

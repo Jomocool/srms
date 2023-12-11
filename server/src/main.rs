@@ -253,7 +253,7 @@ impl ServerHandler {
 
                 str
             }
-            Err(DBError::UpdateError(e)) => e,
+            Err(DBError::DeleteError(e)) => e,
             _ => todo!(),
         };
 
@@ -276,7 +276,6 @@ impl ServerHandler {
 
         // 完整信息
         let log_data = format!("{}   {}\n", formatted_time, action);
-        println!("{log_data}");
 
         // 写入日志文件
         let mut file = OpenOptions::new()

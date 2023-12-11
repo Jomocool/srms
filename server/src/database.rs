@@ -32,7 +32,7 @@ impl DBHandler {
     }
 
     pub fn delete(&mut self, table: String, where_clause: String) -> Result<String, DBError> {
-        let query = format!("DELETE FROM {} {}", table, where_clause,);
+        let query = format!("DELETE FROM {} {}", table, where_clause);
 
         let res = self.conn.query_iter(query);
 
